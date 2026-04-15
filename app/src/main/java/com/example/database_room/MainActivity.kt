@@ -19,11 +19,14 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // ✅ Initialize DB (ONLY once)
         db = Room.databaseBuilder(
             applicationContext,
             AppDatabase::class.java,
             "user_database"
-        ).build()
+        )
+            .fallbackToDestructiveMigration()
+            .build()
 
         val etId = findViewById<EditText>(R.id.etId)
         val etName = findViewById<EditText>(R.id.etName)
@@ -48,20 +51,24 @@ class MainActivity : AppCompatActivity() {
             }
 
             lifecycleScope.launch(Dispatchers.IO) {
-                db.userDao().insertUser(User(name = name, age = age))
+                val result = db.userDao().insertUser(User(name = name, age = age))
                 val users = db.userDao().getAllUsers()
 
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@MainActivity, "User Added", Toast.LENGTH_SHORT).show()
-                    tvResult.text = formatUsers(users)
+                    if (result == -1L) {
+                        Toast.makeText(this@MainActivity, "User already exists ❌", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@MainActivity, "User Added ✅", Toast.LENGTH_SHORT).show()
+                    }
 
+                    tvResult.text = formatUsers(users)
                     etName.text.clear()
                     etAge.text.clear()
                 }
             }
         }
 
-        // ✏️ Update User (by ID)
+        // ✏️ Update User
         btnUpdate.setOnClickListener {
             val id = etId.text.toString().toIntOrNull()
             val name = etName.text.toString().trim()
@@ -73,25 +80,17 @@ class MainActivity : AppCompatActivity() {
             }
 
             lifecycleScope.launch(Dispatchers.IO) {
-                val existingUser = db.userDao().getUserById(id)
-
-                val rowsUpdated = if (existingUser != null) {
-                    db.userDao().updateUser(User(id = id, name = name, age = age))
-                } else {
-                    0
-                }
-
+                val rowsUpdated = db.userDao().updateUser(User(id = id, name = name, age = age))
                 val users = db.userDao().getAllUsers()
 
                 withContext(Dispatchers.Main) {
-                    if (rowsUpdated > 0) {
-                        Toast.makeText(this@MainActivity, "User Updated", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(this@MainActivity, "User Not Found", Toast.LENGTH_SHORT).show()
-                    }
+                    Toast.makeText(
+                        this@MainActivity,
+                        if (rowsUpdated > 0) "User Updated" else "User Not Found",
+                        Toast.LENGTH_SHORT
+                    ).show()
 
                     tvResult.text = formatUsers(users)
-
                     etId.text.clear()
                     etName.text.clear()
                     etAge.text.clear()
@@ -113,11 +112,11 @@ class MainActivity : AppCompatActivity() {
                 val users = db.userDao().getAllUsers()
 
                 withContext(Dispatchers.Main) {
-                    if (rowsDeleted > 0) {
-                        Toast.makeText(this@MainActivity, "User Deleted", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(this@MainActivity, "User Not Found", Toast.LENGTH_SHORT).show()
-                    }
+                    Toast.makeText(
+                        this@MainActivity,
+                        if (rowsDeleted > 0) "User Deleted" else "User Not Found",
+                        Toast.LENGTH_SHORT
+                    ).show()
 
                     tvResult.text = formatUsers(users)
                     etId.text.clear()
@@ -125,7 +124,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // ❌ Delete All Users
+        // ❌ Delete All + Reset ID
         btnDeleteAll.setOnClickListener {
             lifecycleScope.launch(Dispatchers.IO) {
                 db.userDao().deleteAllAndReset()
@@ -149,7 +148,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // 📄 Format Output
+    // ✅ Clean function
     private fun formatUsers(users: List<User>): String {
         return if (users.isEmpty()) {
             "No Users Found"

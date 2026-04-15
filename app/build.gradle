@@ -14,6 +14,8 @@ android {
         targetSdk 34
         versionCode 1
         versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -23,15 +25,20 @@ android {
         }
     }
 
-    // ✅ FIX: Use Java 17
+    // ✅ Java 17 (correct)
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
 
-    // ✅ FIX: Match Kotlin with Java
+    // ✅ Kotlin JVM target must match Java
     kotlinOptions {
         jvmTarget = '17'
+    }
+
+    // ✅ (Recommended) Enable ViewBinding (optional but useful)
+    buildFeatures {
+        viewBinding true
     }
 }
 
@@ -42,9 +49,17 @@ dependencies {
     implementation 'com.google.android.material:material:1.11.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 
-    // Room
+    // ✅ Room Database
     def room_version = "2.6.1"
+
     implementation "androidx.room:room-runtime:$room_version"
     kapt "androidx.room:room-compiler:$room_version"
+
     implementation "androidx.room:room-ktx:$room_version"
+
+    // ✅ (IMPORTANT) Lifecycle + Coroutines (you are using lifecycleScope)
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.7.0"
+
+    // ✅ (Optional but good practice)
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
 }
